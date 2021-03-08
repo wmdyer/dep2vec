@@ -9,7 +9,7 @@ We begin with the idea that nouns are vectors and adjectives are functions (line
 
 This paper proposes two extensions of the *a*(**N**) → **AN** idea: (1) expand the notion to all heads and dependents regardless of syntactic category such that roots are vectors and dependents are functions; and (2) perform Hadamard or element-wise multiplication between sister dependents.
 
-For example, the below sentence and its associated dependency parse ([Nivre, 2005](https://linguistics.byu.edu/classes/Ling430dl/depparsing.pdf)
+For example, the below sentence and its associated dependency parse (from [Universal Depedencies](https://universaldependencies.org/introduction.html))
 
 ![Image of dependency graph](https://github.com/wmdyer/dep2vec/blob/main/img/ud.png)
 
