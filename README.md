@@ -36,3 +36,6 @@ usage: vec2func.py [-h] -i INFILE -o OUTFILE
 ```
 usage: dep2vec.py [-h] -i INFILE -o OUTFILE -v VECTORS -f FUNCTIONS
 ```
+
+## evaluation
+TODO: measure performance of generated vectors on tasks such as paraphrase detection or machine translation and compare to transformer-generated vectors
