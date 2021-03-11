@@ -7,6 +7,10 @@ While BERT ([Devlin et al., 2019](https://www.aclweb.org/anthology/N19-1423/)) a
 
 We begin with the idea that nouns are vectors and adjectives are functions (linear maps) operating on vectors ([Baroni & Zamparelli, 2010](https://www.aclweb.org/anthology/D10-1115/)). In this framework, an adjective serves to map an *n*-dimensional **N** vector to an *n*-dimensional **AN** vector; as such, the adjective function *a* is represented by an *n*x*n* tensor, which is set of weights resulting from a least-squares training process on multiple **N** → **AN** instances learned from a corpus ([Guevara, 2010](https://www.aclweb.org/anthology/W10-2805)). Thus the matrix-multiplication between *a* and **N** yields **AN**; or more succinctly: *a*@**N** → **AN**.
 
+## bigram embeddings
+How to properly determine the vector representation for an adjective-noun pair, **AN**, is unclear; more generally, the embedding of a bigram, whether linear or within a dependency pair, is an open question. [Mitchell & Lapata (2008)](https://www.aclweb.org/anthology/P08-1028/) add or multiply **A** and **N** to yield **AN**, while [Erk & Padó (2008)](https://www.aclweb.org/anthology/D08-1094/) use the centroid of verbs that a noun tends to be dependent on to compose **VN**. [Baroni & Zamparelli (2010)](https://www.aclweb.org/anthology/D10-1115/) and [Guevara (2010)](https://www.aclweb.org/anthology/W10-2805) suggest calculating the embedding of co-occurring adjectives and nouns in a corpus directly, as though they were unigrams.
+
+## contribution
 This paper proposes two extensions of the *a*(**N**) → **AN** idea: (1) expand the notion to all heads and dependents regardless of syntactic category such that roots are vectors and dependents are functions; and (2) perform Hadamard or element-wise multiplication between sister dependents.
 
 For example, the below sentence and its associated dependency parse (from [Universal Depedencies](https://universaldependencies.org/introduction.html))
