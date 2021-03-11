@@ -1,7 +1,12 @@
+import argparse, math, re, sys, tqdm
+
 import networkx as nx
 import numpy as np
 import pandas as pd
-import argparse, math, re, sys, tqdm
+
+from sklearn.preprocessing import MinMaxScaler
+
+SISTER = '+'
 
 def read_conllu(filename):
     print("Reading " + filename)
@@ -12,7 +17,7 @@ def read_conllu(filename):
     df = df.loc[~df['IDX'].str.contains('-')]
 
     # make IDX and HEAD numeric    
-    df[['IDX', 'HEAD']] = df[['IDX', 'HEAD']].apply(pd.to_numeric, errors='coerce')
+    df[['IDX', 'HEAD']] = df[['IDX', 'HEAD']].apply(pd.to_numeric, errors='coerce', downcast='float')
 
     df = df.reset_index(drop=True)
     
@@ -25,6 +30,7 @@ def read_conllu(filename):
 def read_vectors(filename):
     print("\nLoading data from %s" % filename, file=sys.stderr)
     d = {}
+    scaler = MinMaxScaler(feature_range=(-2,2))
     with open(filename) as infile:
         n, ndim = next(infile).strip().split()
         n = int(n)
@@ -32,13 +38,15 @@ def read_vectors(filename):
         lines = list(infile)
         for line in tqdm.tqdm(lines):
             parts = line.strip().split(" ")
-            numbers = list(map(float, parts[-ndim:]))
+            numbers = np.array(list(map(float, parts[-ndim:])))
+            numbers = numbers.reshape(-1,1)
+            scaler.fit(numbers)
+            numbers = scaler.transform(numbers).flatten()
             #vec = torch.Tensor(numbers)
             wordparts = parts[:-ndim]
             word = " ".join(wordparts)
             d[word] = numbers
 
-    print("Loaded.", file=sys.stderr)
     return d, ndim
 
 def write_vectors(df, outfilename, v, f, ndim):
@@ -53,10 +61,15 @@ def write_vectors(df, outfilename, v, f, ndim):
     for key in f:
         f[key] = np.reshape(f[key], (ndim,ndim))
 
-    f['ONES'] = np.ones((ndim,ndim))
+    if SISTER == '*':
+        f['ONES'] = np.ones((ndim,ndim))
+        v['ONES'] = np.ones(ndim)
+    else:
+        f['ONES'] = np.zeros((ndim,ndim))
+        v['ONES'] = np.zeros(ndim)
+        
     f['IDENT'] = np.identity(ndim)
-    v['ONES'] = np.ones(ndim)
-    v['IDENT'] = np.ones(ndim)    
+    v['IDENT'] = np.ones(ndim)
     
     outfile = open(outfilename, 'w')
 
@@ -75,6 +88,7 @@ def write_vectors(df, outfilename, v, f, ndim):
             end = len(df)
         dfs = df.iloc[start:end]
         dfs = dfs.reset_index(drop=True)
+
         
         dfs['EDGE'] = list(zip(dfs.HEAD, dfs.IDX))
         
@@ -86,15 +100,17 @@ def write_vectors(df, outfilename, v, f, ndim):
             tree = 'v['.join(tree.rsplit('f[', 1))
 
             if tree[0:2] == '(v':
-                tree = tree + "*v['ONES']"
+                tree = tree + SISTER + "v['ONES']"
 
             vec = eval(tree)
 
             outvec = np.array2string(vec)[1:-1].replace('  ', ' ')
             sentence = ' '.join(dfs['WORDFORM'].values.astype(str))
 
-            outfile.write(sentence + "\t" + outvec + "\n")
-        except:
+            outfile.write('\t'.join([sentence, tree, outvec]) + "\n")
+        except Exception as e:
+            print(e)
+            print(G.nodes)
             pass
 
     outfile.close()
@@ -104,7 +120,7 @@ def print_node(G, n, out, df, v, f):
         if i == 0:
             out += "("
         else:
-            out += "*"
+            out += SISTER
         out = print_node(G, s, out, df, v, f)
 
         if i == len(list(G.successors(n))) - 1:
@@ -117,10 +133,10 @@ def print_node(G, n, out, df, v, f):
             if w in f:
                 out += "f['" + df.loc[df['IDX'] == n]['WORDFORM'].values[0] + "']"
             else:
-                prev = "*"
+                prev = SISTER
                 i = -1
                 try:
-                    while out[i] not in ['@', '*']:
+                    while out[i] not in ['@', SISTER]:
                         i += -1
 
                     prev = out[i]
@@ -128,7 +144,7 @@ def print_node(G, n, out, df, v, f):
                     pass
                 if prev == '@':
                     out += "f['IDENT']"
-                elif prev == "*":
+                elif prev == SISTER:
                     out += "f['ONES']"
                 else:
                     print(out)
@@ -153,7 +169,7 @@ if __name__ == '__main__':
     
     conllu = read_conllu(args.infile[0])
     v, ndim = read_vectors(args.vectors[0])
-    f, ndim = read_vectors(args.functions[0])
+    f, ndim = read_vectors(args.functions[0])    
     
     write_vectors(conllu, args.outfile[0], v, f, int(math.sqrt(ndim)))
     
