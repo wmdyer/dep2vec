@@ -1,10 +1,7 @@
-import argparse, math, re, sys, tqdm
-
+import argparse, math, pickle, re, sys, tqdm
 import networkx as nx
 import numpy as np
 import pandas as pd
-
-from sklearn.preprocessing import MinMaxScaler
 
 SISTER = '+'
 
@@ -15,6 +12,9 @@ def read_conllu(filename):
 
     # remove MWEs
     df = df.loc[~df['IDX'].str.contains('-')]
+
+    # remove PUNCT
+    #df = df.loc[df['UPOS'] != 'PUNCT']
 
     # make IDX and HEAD numeric    
     df[['IDX', 'HEAD']] = df[['IDX', 'HEAD']].apply(pd.to_numeric, errors='coerce', downcast='float')
@@ -30,7 +30,6 @@ def read_conllu(filename):
 def read_vectors(filename):
     print("\nLoading data from %s" % filename, file=sys.stderr)
     d = {}
-    scaler = MinMaxScaler(feature_range=(-2,2))
     with open(filename) as infile:
         n, ndim = next(infile).strip().split()
         n = int(n)
@@ -39,10 +38,6 @@ def read_vectors(filename):
         for line in tqdm.tqdm(lines):
             parts = line.strip().split(" ")
             numbers = np.array(list(map(float, parts[-ndim:])))
-            numbers = numbers.reshape(-1,1)
-            scaler.fit(numbers)
-            numbers = scaler.transform(numbers).flatten()
-            #vec = torch.Tensor(numbers)
             wordparts = parts[:-ndim]
             word = " ".join(wordparts)
             d[word] = numbers
@@ -97,14 +92,15 @@ def write_vectors(df, outfilename, v, f, ndim):
 
         try:
             tree = re.sub("@$", "", print_node(G, '0.0', "", dfs, v, f))
-            tree = 'v['.join(tree.rsplit('f[', 1))
+            tree = '(2*v['.join(tree.rsplit('f[', 1)) + ')'
 
             if tree[0:2] == '(v':
                 tree = tree + SISTER + "v['ONES']"
 
             vec = eval(tree)
-
+                
             outvec = np.array2string(vec)[1:-1].replace('  ', ' ')
+            
             sentence = ' '.join(dfs['WORDFORM'].values.astype(str))
 
             outfile.write('\t'.join([sentence, tree, outvec]) + "\n")
@@ -152,7 +148,7 @@ def print_node(G, n, out, df, v, f):
                     exit()
         else:
             if w in v:
-                out += "v['" + df.loc[df['IDX'] == n]['WORDFORM'].values[0] + "']"
+                out += "(2*v['" + df.loc[df['IDX'] == n]['WORDFORM'].values[0] + "'])"
             else:
                 out += "v['ONES']"
                 
@@ -168,8 +164,24 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     conllu = read_conllu(args.infile[0])
-    v, ndim = read_vectors(args.vectors[0])
-    f, ndim = read_vectors(args.functions[0])    
+    pkl_file = 'vectors.pkl'
+    try:
+        pf = open(pkl_file, 'rb')
+        print("loading pickle data from " + pkl_file)
+        v = pickle.load(pf)
+        f = pickle.load(pf)
+        ndim = pickle.load(pf)
+        pf.close()
+    except:
+        v, ndim = read_vectors(args.vectors[0])
+        f, ndim = read_vectors(args.functions[0])
+
+        print("writing pickle data to " + pkl_file)
+        pf = open(pkl_file, 'wb')
+        pickle.dump(v, pf)
+        pickle.dump(f, pf)
+        pickle.dump(ndim, pf)
+        pf.close()
     
     write_vectors(conllu, args.outfile[0], v, f, int(math.sqrt(ndim)))
     

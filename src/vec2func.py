@@ -4,6 +4,8 @@ import argparse, sys, tqdm
 from collections import defaultdict
 from sklearn.preprocessing import MinMaxScaler
 
+VEC_LIMIT = 100
+
 def read_vectors(filename):
     print("\nLoading vectors from %s" % filename, file=sys.stderr)
     d = {}
@@ -49,6 +51,8 @@ def calc_vecs(vectors):
                     y.append(vectors[k])
                 except:
                     pass
+            if len(X) > VEC_LIMIT:
+                break
 
         if len(X) > 1:
             X = np.array(X)
@@ -107,6 +111,9 @@ def calc_vecs_conllu(vectors, ud, udname):
                 X.append(vectors[h])
             except:
                 pass
+
+            if len(X) > VEC_LIMIT:
+                break
 
         if len(X) > 1:
             X = np.array(X)

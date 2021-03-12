@@ -6,12 +6,6 @@ import pandas as pd
 from conll_utils import *
 from gensim.models.word2vec import *
 
-# random
-from random import shuffle
-
-# necessary for seeing logs
-import logging
-
 def write_vecs(model, ndim, outfilename):
     print("Saving vectors to " + outfilename)
     np.set_printoptions(suppress=True)
@@ -75,8 +69,9 @@ def sent2sents(df):
 
         G = nx.DiGraph()
         G.add_edges_from(dfs['EDGE'].values)
-        dfs.set_index('IDX')
+        dfs.set_index('IDX', inplace=True)
         words = dfs['WORDFORM'].to_dict()
+        
         sents.append(graph2sents(G, words))
 
     return [item for sublist in sents for item in sublist]
