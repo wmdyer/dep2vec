@@ -18,6 +18,7 @@ For example, we have the below sentence and its associated dependency parse (fro
 
 A string can be parsed by something like [UDPipe](https://github.com/ufal/udpipe) to reveal its dependency structure. The context for dependent words is simply the list of paths from each of the leaf nodes to the root, unigrams being the words themselves and bigrams each pair of adjacent words. Thus the contextual frames for the sentence above are
 
+```
 - the dog chased
 - the_dog chased
 - the dog_chased
@@ -29,8 +30,13 @@ A string can be parsed by something like [UDPipe](https://github.com/ufal/udpipe
 - the_cat chased
 - the cat_chased
 - . chased
+```
 
-Finally, the vectorized representation of the sentence is the result of evaluating ((*the*@*dog*)+(*was*)+((*by*+*the*)@*cat*)+*.*)@**chased**, where **chased** is a vector and all other words are trained functions.
+Finally, the vectorized representation of the sentence is the result of evaluating 
+
+> ((*the*@*dog*)+(*was*)+((*by*+*the*)@*cat*)+*.*)@**chased**
+
+where **chased** is a vector and all other words are trained functions.
 
 ## code usage
 
