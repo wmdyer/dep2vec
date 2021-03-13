@@ -1,9 +1,7 @@
-# take a CoNLL corpus and train word/doc embeddings
-import argparse, os, sys, tqdm
+import argparse, os, subprocess, sys, tqdm
 import networkx as nx
 import numpy as np
 import pandas as pd
-from conll_utils import *
 from gensim.models.word2vec import *
 
 def write_vecs(model, ndim, outfilename):
@@ -41,9 +39,41 @@ def read_conllu(filename):
     
     return df
 
-def sent2sents(df):
+def line_count(filename):
+    return int(subprocess.check_output(['wc', '-l', filename]).split()[0])
+
+def extract_sents(filename):
 
     sents = []
+
+    print("extracting from " + filename)
+    prev_idx = 0
+    words = {}
+    edges = {}
+    heads = defaultdict(list)
+
+    f = open(filename, 'r')
+    for line in tqdm.tqdm(f, total=line_count(filename)):
+        cols = line.split('\t')
+        
+        if len(cols) > 1 and '-' not in cols[0] and '.' not in cols[0]:
+            idx = int(cols[0])
+
+            if idx < prev_idx:
+                G = nx.DiGraph()
+                G.add_edges_from(([(edges[k], k) for k in edges.keys()]))
+        
+                sents.append(graph2sents(G, words))
+                words = {}
+                edges = {}
+
+            else:
+                words[idx] = cols[1].lower()
+                edges[idx] = int(cols[6])
+                
+            prev_idx = idx
+
+    return [item for sublist in sents for item in sublist]
 
     # get sentence boundaries
     sent_idx = df.loc[df['IDX'] == 1].index.values
@@ -129,8 +159,8 @@ def main():
     
     args = parser.parse_args()
 
-    df = read_conllu(args.input_file)
-    sents = sent2sents(df)
+    #df = read_conllu(args.input_file)
+    sents = extract_sents(args.input_file)
 
 
     #trainLabeledSentences = []

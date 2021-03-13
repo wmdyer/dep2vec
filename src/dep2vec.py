@@ -27,24 +27,8 @@ def read_conllu(filename):
 
     return df
 
-def read_vectors(filename):
-    print("\nLoading data from %s" % filename, file=sys.stderr)
-    d = {}
-    with open(filename) as infile:
-        n, ndim = next(infile).strip().split()
-        n = int(n)
-        ndim = int(ndim)
-        lines = list(infile)
-        for line in tqdm.tqdm(lines):
-            parts = line.strip().split(" ")
-            numbers = np.array(list(map(float, parts[-ndim:])))
-            wordparts = parts[:-ndim]
-            word = " ".join(wordparts)
-            d[word] = numbers
-
-    return d, ndim
-
 def write_vectors(df, outfilename, v, f, ndim):
+
     print("writing to " + outfilename)
 
     np.set_printoptions(suppress=True)
@@ -90,25 +74,22 @@ def write_vectors(df, outfilename, v, f, ndim):
         G = nx.DiGraph()
         G.add_edges_from(dfs['EDGE'].values)
 
+        tree = re.sub("@$", "", print_node(G, '0.0', "", dfs, v, f))
+        tree = 'v['.join(tree.rsplit('f[', 1))
+
+        if tree[0:2] == '(v':
+            tree = tree + SISTER + "v['ONES']"
+
         try:
-            tree = re.sub("@$", "", print_node(G, '0.0', "", dfs, v, f))
-            tree = '(2*v['.join(tree.rsplit('f[', 1)) + ')'
-
-            if tree[0:2] == '(v':
-                tree = tree + SISTER + "v['ONES']"
-
             vec = eval(tree)
-                
-            outvec = np.array2string(vec)[1:-1].replace('  ', ' ')
-            
-            sentence = ' '.join(dfs['WORDFORM'].values.astype(str))
-
-            outfile.write('\t'.join([sentence, tree, outvec]) + "\n")
         except Exception as e:
-            print(e)
-            print(G.nodes)
             pass
+            
+        outvec = np.array2string(vec)[1:-1].replace('  ', ' ')
+            
+        sentence = ' '.join(dfs['WORDFORM'].values.astype(str))
 
+        outfile.write('\t'.join([sentence, tree, outvec]) + "\n")
     outfile.close()
 
 def print_node(G, n, out, df, v, f):
@@ -159,8 +140,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='make mods')
     parser.add_argument('-i', '--infile', dest='infile', nargs=1, required=True, help='conllu file')
     parser.add_argument('-o', '--outfile', dest='outfile', nargs=1, required=True, help='out file')
-    parser.add_argument('-v', '--vectors', dest='vectors', nargs=1, required=True, help='vectors file')
-    parser.add_argument('-f', '--functions', dest='functions', nargs=1, required=True, help='functions file')
+    #parser.add_argument('-v', '--vectors', dest='vectors', nargs=1, required=True, help='vectors file')
+    #parser.add_argument('-f', '--functions', dest='functions', nargs=1, required=True, help='functions file')
     args = parser.parse_args()
     
     conllu = read_conllu(args.infile[0])
@@ -173,8 +154,10 @@ if __name__ == '__main__':
         ndim = pickle.load(pf)
         pf.close()
     except:
-        v, ndim = read_vectors(args.vectors[0])
-        f, ndim = read_vectors(args.functions[0])
+        print("ERROR: vectors.pkl doesn't exist")
+        exit()
+        #v, ndim = read_vectors(args.vectors[0])
+        #f, ndim = read_vectors(args.functions[0])
 
         print("writing pickle data to " + pkl_file)
         pf = open(pkl_file, 'wb')

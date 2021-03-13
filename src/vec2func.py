@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-import argparse, sys, tqdm
+import argparse, pickle, sys, tqdm
 from collections import defaultdict
 from sklearn.preprocessing import MinMaxScaler
 
@@ -30,107 +30,46 @@ def read_conllu(filename):
     return df
 
 def calc_vecs(vectors):
-    print("Calculating vectors")
-    
     mvecs = {}
 
-    deps = []
-    for key in vectors.keys():
-        if '_' not in key:
-            deps.append(key)
-    
-    for dep in tqdm.tqdm(deps):
-        
-        X = []
-        y = []
-        
-        for k in vectors.keys():
-            if k.startswith(dep+"_"):
-                try:
-                    X.append(vectors[k.split('_')[1]])
-                    y.append(vectors[k])
-                except:
-                    pass
-            if len(X) > VEC_LIMIT:
-                break
-
-        if len(X) > 1:
-            X = np.array(X)
-            y = np.array(y)
-            try:
-                w = np.linalg.inv(X.T@X)@X.T@y
-                mvecs[dep] = w.flatten()
-            except:
-                pass
-            
-    return mvecs
-
-def calc_vecs_conllu(vectors, ud, udname):
-    mvecs = {}
-
-    words = {}
     deps = defaultdict(list)
-    relations = {}
+    unigrams = {}
 
-    X = []
-    y = []
+    print("assembling dependency relations")
+    for key in tqdm.tqdm(vectors.keys()):
+        if '_' in key:
+            d = key.split('_')[0]
+            h = key.split('_')[1]            
+            if h not in deps[d]:
+                deps[d].append(h)
+        else:
+            unigrams[key] = vectors[key]
+                
 
-    total = len(ud)
-    print("Getting dependency relations from " + udname)
-    for i,row in tqdm.tqdm(ud.iterrows(), total=total):
-        if '-' not in row['IDX'] and '.' not in row['IDX']:
-            idx = row['IDX']
-            if int(row['IDX']) == 1 and len(relations) > 0:
-                for key in relations.keys():
-                    try:
-                        head = words[relations[key]]
-                        dep = words[key]
-                        if head not in deps[dep]:
-                            deps[dep].append(head)
-                    except:
-                        pass
-                words = {}
-                relations = {}
-            else:
-                try:
-                    words[idx] = row['WORDFORM'].lower()
-                    relations[idx] = row['HEAD']
-                except:
-                    pass
-
-    print("Calculating functions")
-    #scaler = MinMaxScaler(feature_range=(-1.5,1.5))
-    for d in tqdm.tqdm(deps):
+                
+    print("calculating functions")
+    for d in tqdm.tqdm(deps.keys()):
         
         X = []
         y = []
 
         for h in deps[d]:
             try:
-                y.append(np.add(vectors[h],vectors[d])/2)
                 X.append(vectors[h])
+                y.append(vectors[d])
             except:
                 pass
-
-            if len(X) > VEC_LIMIT:
-                break
 
         if len(X) > 1:
             X = np.array(X)
             y = np.array(y)
             try:
                 w = np.linalg.inv(X.T@X)@X.T@y
-                #w = w.reshape(-1,1)
-                #scaler.fit(w)
-                #mvecs[d] = scaler.transform(w).flatten()
                 mvecs[d] = w.flatten()
-            except Exception as e:
-                print(e)
-                exit()
+            except:
                 pass
             
-    return mvecs
-
+    return mvecs, unigrams
 
 def write_vecs(d, ndim, outfilename):
     print("Saving vectors to " + outfilename)
@@ -152,7 +91,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='make mods')
     parser.add_argument('-i', '--infile', dest='infile', nargs=1, required=True, help='input vector file')
-    parser.add_argument('-o', '--outfile', dest='outfile', nargs=1, required=True, help='output vector file')
+    #parser.add_argument('-o', '--outfile', dest='outfile', nargs=1, required=True, help='output vector file')
     parser.add_argument('-c', '--conllu', dest='conllu', nargs=1, required=False, help='conllu file')
     args = parser.parse_args()
 
@@ -162,6 +101,15 @@ if __name__ == '__main__':
         ud = read_conllu(args.conllu[0])
         d = calc_vecs_conllu(vectors, ud, args.conllu[0])
     except:
-        d = calc_vecs(vectors)
-    write_vecs(d, ndim, args.outfile[0])
+        d, vectors = calc_vecs(vectors)
+
+    pkl_file = 'vectors.pkl'
+    print("writing pickle data to " + pkl_file)
+    pf = open(pkl_file, 'wb')
+    pickle.dump(vectors, pf)
+    pickle.dump(d, pf)
+    pickle.dump(ndim**2, pf)
+    pf.close()
+    
+    #write_vecs(d, ndim, args.outfile[0])
 
