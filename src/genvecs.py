@@ -107,10 +107,11 @@ def graph2sents(G, words):
         path = []
         try:
             path = nx.shortest_path(G, 0, leaf)
+            sent = [words[int(x)] for x in path[::-1][:-1]]
         except:
             break
 
-        sent = [words[int(x)] for x in path[::-1][:-1]]
+
         if len(sent) > 1:
             sents.append(sent)
                             

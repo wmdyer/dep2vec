@@ -193,7 +193,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     conllu = read_conllu(args.infile[0])
-    pkl_file = 'vectors.pkl'
+    pkl_file = 'functions.pkl'
     try:
         pf = open(pkl_file, 'rb')
         print("loading pickle data from " + pkl_file)
@@ -202,7 +202,7 @@ if __name__ == '__main__':
         ndim = pickle.load(pf)
         pf.close()
     except:
-        print("ERROR: vectors.pkl doesn't exist")
+        print("ERROR: " + pkl_file + " doesn't exist")
         exit()
     
     write_vectors(conllu, args.outfile[0], v, f, int(math.sqrt(ndim)))

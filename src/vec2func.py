@@ -17,7 +17,6 @@ def read_vectors(filename):
         for line in tqdm.tqdm(lines):
             parts = line.strip().split(" ")
             numbers = list(map(float, parts[-ndim:]))
-            #vec = torch.Tensor(numbers)
             wordparts = parts[:-ndim]
             word = " ".join(wordparts)
             d[word] = numbers
@@ -106,6 +105,7 @@ if __name__ == '__main__':
     try:
         write_vecs(d, ndim, args.outfile[0])
     except:
+        pkl_file = 'functions.pkl'            
         print("writing pickle data to " + pkl_file)
         pf = open(pkl_file, 'wb')
         pickle.dump(vectors, pf)
