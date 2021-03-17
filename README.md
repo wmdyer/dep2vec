@@ -1,6 +1,6 @@
 # dep2vec
 
-a method for the compositional vectorization of a multi-word string
+a method for the compositional vectorization of a sentence
 
 ## background
 While BERT ([Devlin et al., 2019](https://www.aclweb.org/anthology/N19-1423/)) and other flavors of contextual embeddings seem to be the current SOTA for vectorized representations of sentences or other multi-word strings, they ignore the compositionality of language (Frege, 1892). That is, rather than treating a sentence linearly and generating a vector representation based on the surface order of words, we can instead vectorize the dependency structure represented by the surface order ([Baroni, Bernardi & Zamparelli, 2014](https://www.aclweb.org/anthology/2014.lilt-9.5.pdf). 
