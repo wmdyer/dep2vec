@@ -2,8 +2,11 @@ import argparse, math, pickle, re, sys, tqdm
 import networkx as nx
 import numpy as np
 import pandas as pd
+from sklearn.preprocessing import MinMaxScaler
 
 SISTER = '+'
+PUNCT = True
+DEPREL = False
 
 def read_conllu(filename):
     print("Reading " + filename)
@@ -22,8 +25,10 @@ def read_conllu(filename):
     df = df.reset_index(drop=True)
     
     # case-normalize both lemma and wordform
-    df['LEMMA'] = df['LEMMA'].str.lower()
+    #df['LEMMA'] = df['LEMMA'].str.lower()
     df['WORDFORM'] = df['WORDFORM'].str.lower()
+    if DEPREL:
+        df['WORDFORM'] = df['WORDFORM'] + "/" + df['DEPREL']
 
     return df
 
@@ -56,7 +61,13 @@ def write_vectors(df, outfilename, v, f, ndim):
     sent_idx = df.loc[df['IDX'] == 1.0].index.values
 
     df['HEAD'] = df['HEAD'].astype(str)
-    df['IDX'] = df['IDX'].astype(str)    
+    df['IDX'] = df['IDX'].astype(str)
+
+    sentences = []
+    outvecs = []
+    trees = []
+
+    scaler = MinMaxScaler(feature_range=(-1,1))
 
     # iterate through sentences
     for start in tqdm.tqdm(sent_idx):
@@ -67,29 +78,77 @@ def write_vectors(df, outfilename, v, f, ndim):
             end = len(df)
         dfs = df.iloc[start:end]
         dfs = dfs.reset_index(drop=True)
-
         
         dfs['EDGE'] = list(zip(dfs.HEAD, dfs.IDX))
-        
         G = nx.DiGraph()
         G.add_edges_from(dfs['EDGE'].values)
 
-        tree = re.sub("@$", "", print_node(G, '0.0', "", dfs, v, f))
-        tree = 'v['.join(tree.rsplit('f[', 1))
+        if True:
+            dfs.set_index('IDX', inplace=True)
+            words = dfs['WORDFORM'].to_dict()            
+            _trees = []
+            leaves = [x for x in G.nodes() if G.out_degree(x)==0]
+            for leaf in leaves:
+                try:
+                    path = nx.shortest_path(G, '0', leaf)
+                except:
+                    try:
+                        path = nx.shortest_path(G, '0.0', leaf)
+                    except:
+                        pass
+                psent = []
+                length = len(path[::-1][:-1]) - 1
+                for i,x in enumerate(path[::-1][:-1]):
+                    try:
+                        if "'" not in words[x] and '"' not in words[x] and ((i < length and words[x] in f) or (i == length and words[x] in v)):
+                            w = words[x]
+                        else:
+                            w = 'IDENT'
+                        psent.append("f['" + w + "']")
+                    except:
+                        pass
+                try:
+                    psent[-1] = re.sub('f\[', 'v[', psent[-1])
+                    _trees.append('(' + '@'.join(psent) + ')')
+                except:
+                    pass
 
-        if tree[0:2] == '(v':
-            tree = tree + SISTER + "v['ONES']"
+            tree = "np.sum([" + ','.join(_trees) + "], axis=0)"
+                
+        else:
+
+            tree = re.sub("@$", "", print_node(G, '0', "", dfs, v, f))
+            #tree = 'v['.join(tree.rsplit('*v[', 1))
+            #tree = re.sub("[+]*f\['ONES'\]", "", tree)
+            #tree = re.sub("\(\)", "", tree)
+            
+            #if tree[0:3] == '(@v':
+            #    tree = re.sub("\(", "(f['IDENT']", tree)
 
         try:
             vec = eval(tree)
+            trees.append(tree)
+            outvecs.append(vec)
+            
+            sentence = ' '.join(dfs['WORDFORM'].values.astype(str))
+            sentences.append(sentence)
         except Exception as e:
+            print(e)
+            print(tree)
+            exit()
             pass
-            
-        outvec = np.array2string(vec)[1:-1].replace('  ', ' ')
-            
-        sentence = ' '.join(dfs['WORDFORM'].values.astype(str))
 
-        outfile.write('\t'.join([sentence, tree, outvec]) + "\n")
+    #outvecs = np.array(outvecs)
+    #scaler.fit(outvecs)
+    #outvecs = scaler.transform(outvecs)
+
+    for i,sentence in enumerate(sentences):
+        try:
+            outvec = np.array2string(outvecs[i])[1:-1].replace('  ', ' ').strip()
+            tree = trees[i]
+            outfile.write('\t'.join([sentence, tree, outvec]) + "\n")
+        except Exception as e:
+            print(e)
     outfile.close()
 
 def print_node(G, n, out, df, v, f):
@@ -104,9 +163,13 @@ def print_node(G, n, out, df, v, f):
             out += ")@"
 
     if n != "0.0":
-        w = re.escape(df.loc[df['IDX'] == n]['WORDFORM'].values[0])
+        w = df.loc[df['IDX'] == n]['WORDFORM'].values[0]
+        h = df.loc[df['IDX'] == n]['HEAD'].values[0]
+        if not PUNCT and df.loc[df['IDX'] == n]['UPOS'].values[0] == 'PUNCT':
+            w = 'OOV'
 
-        if len(G.nodes) != len(out.split('[')):
+        #if len(G.nodes) != len(out.split('[')):
+        if h != '0.0':
             if w in f:
                 out += "f['" + df.loc[df['IDX'] == n]['WORDFORM'].values[0] + "']"
             else:
@@ -129,7 +192,7 @@ def print_node(G, n, out, df, v, f):
                     exit()
         else:
             if w in v:
-                out += "(2*v['" + df.loc[df['IDX'] == n]['WORDFORM'].values[0] + "'])"
+                out += "v['" + df.loc[df['IDX'] == n]['WORDFORM'].values[0] + "']"
             else:
                 out += "v['ONES']"
                 

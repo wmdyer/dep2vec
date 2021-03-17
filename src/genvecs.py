@@ -1,8 +1,11 @@
-import argparse, os, subprocess, sys, tqdm
+import argparse, os, pickle, re, subprocess, sys, tqdm
 import networkx as nx
 import numpy as np
 import pandas as pd
 from gensim.models.word2vec import *
+
+GRAPH = True
+DEPREL = False
 
 def write_vecs(model, ndim, outfilename):
     print("Saving vectors to " + outfilename)
@@ -20,27 +23,38 @@ def write_vecs(model, ndim, outfilename):
         outfile.write("%s %s\n"%(k, vec))
     outfile.close()
 
-def read_conllu(filename):
-    print("Reading " + filename)
-    df = pd.read_csv(filename, sep='\t', comment='#', header=None, dtype=str, quoting=3, engine='python', error_bad_lines=False, skip_blank_lines=True, index_col=None )
-    df.columns = ['IDX', 'WORDFORM', 'LEMMA', 'UPOS', 'XPOS', 'FEATS', 'HEAD', 'DEPREL', 'DEPS', 'MISC']
-    
-    # remove MWEs
-    df = df.loc[(~df['IDX'].str.contains('-')) & (~df['IDX'].str.contains('\.'))]
-                    
-    # make IDX and HEAD numeric
-    df[['IDX', 'HEAD']] = df[['IDX', 'HEAD']].apply(pd.to_numeric, errors='coerce', downcast='integer')
+def pickle_vecs(model, ndim):
+    vectors = {}
+    print("converting to dict")
+    for key in tqdm.tqdm(model.wv.vocab.keys()):
+        vec = list(model.wv[key])
+        vectors[key] = vec
 
-    df = df.dropna().reset_index(drop=True)
-
-    # case-normalize both lemma and wordform
-    df['LEMMA'] = df['LEMMA'].str.lower()
-    df['WORDFORM'] = df['WORDFORM'].str.lower()
-    
-    return df
+    pkl_file = 'vectors.pkl'
+    print("writing pickle data to " + pkl_file)
+    pf = open(pkl_file, 'wb')
+    pickle.dump(vectors, pf)
+    pickle.dump(ndim, pf)
+    pf.close()
 
 def line_count(filename):
     return int(subprocess.check_output(['wc', '-l', filename]).split()[0])
+
+def make_sent(words, heads):
+    sent = []
+    for i in words.keys():
+        sent.append(words[i])
+
+    sents = []
+    for h in heads.keys():
+        for d in heads[h]:
+            try:
+                _sent = sent.copy()                            
+                _sent[h-1] = words[d] + "_" + words[h]
+                sents.append(_sent)
+            except:
+                pass
+    return sents
 
 def extract_sents(filename):
 
@@ -50,6 +64,7 @@ def extract_sents(filename):
     prev_idx = 0
     words = {}
     edges = {}
+    #deprels = {}
     heads = defaultdict(list)
 
     f = open(filename, 'r')
@@ -60,81 +75,61 @@ def extract_sents(filename):
             idx = int(cols[0])
 
             if idx < prev_idx:
-                G = nx.DiGraph()
-                G.add_edges_from(([(edges[k], k) for k in edges.keys()]))
-        
-                sents.append(graph2sents(G, words))
-                words = {}
-                edges = {}
+                if GRAPH:
+                    G = nx.DiGraph()
+                    G.add_edges_from(([(edges[k], k) for k in edges.keys()]))
+                    sents.append(graph2sents(G, words))
+                else:
+                    sents.append(make_sent(words, heads))
 
-            else:
-                words[idx] = cols[1].lower()
-                edges[idx] = int(cols[6])
-                
+                words = {}
+                heads = defaultdict(list)
+                edges = {}
+            
+            words[idx] = cols[1].lower()
+            edges[idx] = int(cols[6])
+            hdx = int(cols[6])
+            if idx not in heads[hdx]:
+                heads[hdx].append(idx)
             prev_idx = idx
 
-    return [item for sublist in sents for item in sublist]
-
-    # get sentence boundaries
-    sent_idx = df.loc[df['IDX'] == 1].index.values
-
-    df['HEAD'] = df['HEAD'].astype(int)
-    df['IDX'] = df['IDX'].astype(int)
-
-    G = nx.DiGraph()
-
-    # iterate through sentences
-    for start in tqdm.tqdm(sent_idx):
-        start_idx = np.where(sent_idx == start)[0][0]
-        try:
-            end = sent_idx[start_idx+1]
-        except:
-            end = len(df)
-        dfs = df.iloc[start:end]
-        dfs = dfs.reset_index(drop=True)
-
-        dfs['NODE'] = dfs['IDX']
-
-        dfs['EDGE'] = list(zip(dfs.HEAD, dfs.NODE))
-
-        G = nx.DiGraph()
-        G.add_edges_from(dfs['EDGE'].values)
-        dfs.set_index('IDX', inplace=True)
-        words = dfs['WORDFORM'].to_dict()
-        
+    if GRAPH:
         sents.append(graph2sents(G, words))
-
-    return [item for sublist in sents for item in sublist]
+        return [item for sublist in sents for item in sublist]
+    else:
+        sents.append(make_sent(words, heads))
+        return sents
 
 def graph2sents(G, words):
     sents = []
     leaves = [x for x in G.nodes() if G.out_degree(x)==0]
     for leaf in leaves:
+        path = []
         try:
             path = nx.shortest_path(G, 0, leaf)
-            sent = [words[int(x)-1] for x in path[::-1][:-1]]
-            if len(sent) > 1:
-                sents.append(sent)
-            
-                for i in range(0,len(sent)-1):
-                    a = []
-                    try:
-                        a.append(sent[0:i][0])
-                    except:
-                        pass
-                    try:
-                        a.append(sent[i]+"_"+sent[i+1])
-                    except:
-                        pass
-                    try:
-                        a.append(sent[i+2:][0])
-                    except:
-                        pass
-                    if len(a) > 1:
-                        sents.append(a)
         except:
-            pass
+            break
 
+        sent = [words[int(x)] for x in path[::-1][:-1]]
+        if len(sent) > 1:
+            sents.append(sent)
+                            
+            for i in range(0,len(sent)-1):
+                a = []
+                try:
+                    a.append(sent[0:i][0])
+                except:
+                    pass
+                try:
+                    a.append(sent[i]+"_"+sent[i+1])
+                except:
+                    pass
+                try:
+                    a.append(sent[i+2:][0])
+                except:
+                    pass
+                if len(a) > 1:
+                    sents.append(a)
     return sents
 
 def main():
@@ -142,9 +137,9 @@ def main():
 
     parser = argparse.ArgumentParser(description='Process CoNLL-U corpus and generate a word2vec model.')
     # Required positional argument
-    parser.add_argument('input_file', type=str,
+    parser.add_argument('-i', dest='input_file', type=str, required=True, nargs=1,
                         help='Input CoNLL-U corpus (UTF-8)')
-    parser.add_argument('output_file', type=str,
+    parser.add_argument('-o', dest='output_file', type=str, required=False, nargs=1,
                         help='Base output filename of word2vec model (gensim)')
     parser.add_argument('--epochs', type=int, default=10,
                         help='Training epochs (default 10). Shuffle sentences and re-train during each training epoch.')
@@ -158,37 +153,8 @@ def main():
                         help='Use skip-gram instead of the default CBOW.')
     
     args = parser.parse_args()
+    sents = extract_sents(args.input_file[0])
 
-    #df = read_conllu(args.input_file)
-    sents = extract_sents(args.input_file)
-
-
-    #trainLabeledSentences = []
-    
-    #trainingCorpus = ConllFile(keepMalformed=True,
-    #                           checkParserConformity=False,
-    #                           projectivize=False,
-    #                           enableLemmaMorphemes=False,
-    #                           compatibleJamo=True)
-    
-    #fd = open(args.input_file, 'r', encoding='utf-8')
-    #trainingCorpus.read(fd.read())
-    #fd.close()
-
-    #for sent in trainingCorpus.sentences:
-    #    unigrams = []
-    #    bigrams = []
-    #    for token in sent.tokens:
-    #        dep = token.FORM.lower()
-    #        head = sent.tokens[token.HEAD].FORM.lower()
-    #        unigrams.append(token.FORM.lower().strip())
-    #        bigrams.append('_'.join([dep, head]).strip())
-    #    trainLabeledSentences.append(unigrams)
-        #trainLabeledSentences.append(bigrams)
-
-    #print(trainLabeledSentences)
-    #exit()
-            
     print('Beginning to build model...')
 
     if(args.use_skipgram):
@@ -201,8 +167,11 @@ def main():
     print('Building vocabulary...')
     model.build_vocab(sents)
     model.train(sents, total_examples=model.corpus_count, epochs=args.epochs)
-    
-    write_vecs(model, args.dimension, args.output_file)
+
+    try:
+        write_vecs(model, args.dimension, args.output_file[0])
+    except:
+        pickle_vecs(model, args.dimension)
 
 if __name__ == '__main__':
     main()

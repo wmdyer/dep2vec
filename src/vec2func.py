@@ -4,7 +4,7 @@ import argparse, pickle, sys, tqdm
 from collections import defaultdict
 from sklearn.preprocessing import MinMaxScaler
 
-VEC_LIMIT = 100
+VEC_LIMIT = 1000
 
 def read_vectors(filename):
     print("\nLoading vectors from %s" % filename, file=sys.stderr)
@@ -23,11 +23,6 @@ def read_vectors(filename):
             d[word] = numbers
 
     return d, ndim
-
-def read_conllu(filename):
-    df = pd.read_csv(filename, sep="\t",error_bad_lines=False, engine='python', header=None, comment= '#', quoting=3)
-    df.columns = ['IDX', 'WORDFORM', 'LEMMA', 'UPOS', 'XPOS', 'FEATS', 'HEAD', 'DEPREL', 'OTHER', 'MISC']
-    return df
 
 def calc_vecs(vectors):
     mvecs = {}
@@ -60,11 +55,12 @@ def calc_vecs(vectors):
             except:
                 pass
 
-        if len(X) > 1:
+        if len(X) > 0:
             X = np.array(X)
             y = np.array(y)
             try:
-                w = np.linalg.inv(X.T@X)@X.T@y
+                #w = np.linalg.inv(X.T@X)@X.T@y
+                w = np.linalg.lstsq(X, y, rcond=None)[0]
                 mvecs[d] = w.flatten()
             except:
                 pass
@@ -90,26 +86,31 @@ def write_vecs(d, ndim, outfilename):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='make mods')
-    parser.add_argument('-i', '--infile', dest='infile', nargs=1, required=True, help='input vector file')
-    #parser.add_argument('-o', '--outfile', dest='outfile', nargs=1, required=True, help='output vector file')
+    parser.add_argument('-i', '--infile', dest='infile', nargs=1, required=False, help='input vector file')
+    parser.add_argument('-o', '--outfile', dest='outfile', nargs=1, required=False, help='output vector file')
     parser.add_argument('-c', '--conllu', dest='conllu', nargs=1, required=False, help='conllu file')
     args = parser.parse_args()
 
-    vectors, ndim = read_vectors(args.infile[0])
+    pkl_file = 'vectors.pkl'    
 
     try:
-        ud = read_conllu(args.conllu[0])
-        d = calc_vecs_conllu(vectors, ud, args.conllu[0])
+        vectors, ndim = read_vectors(args.infile[0])
     except:
-        d, vectors = calc_vecs(vectors)
+        pf = open(pkl_file, 'rb')
+        print("loading pickle data from " + pkl_file)
+        vectors = pickle.load(pf)
+        ndim = pickle.load(pf)
+        pf.close()
 
-    pkl_file = 'vectors.pkl'
-    print("writing pickle data to " + pkl_file)
-    pf = open(pkl_file, 'wb')
-    pickle.dump(vectors, pf)
-    pickle.dump(d, pf)
-    pickle.dump(ndim**2, pf)
-    pf.close()
+    d, vectors = calc_vecs(vectors)
     
-    #write_vecs(d, ndim, args.outfile[0])
+    try:
+        write_vecs(d, ndim, args.outfile[0])
+    except:
+        print("writing pickle data to " + pkl_file)
+        pf = open(pkl_file, 'wb')
+        pickle.dump(vectors, pf)
+        pickle.dump(d, pf)
+        pickle.dump(ndim**2, pf)
+        pf.close()
 
