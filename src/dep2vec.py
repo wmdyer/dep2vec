@@ -24,8 +24,7 @@ def read_conllu(filename):
 
     df = df.reset_index(drop=True)
     
-    # case-normalize both lemma and wordform
-    #df['LEMMA'] = df['LEMMA'].str.lower()
+    # case-normalize wordform
     df['WORDFORM'] = df['WORDFORM'].str.lower()
     if DEPREL:
         df['WORDFORM'] = df['WORDFORM'] + "/" + df['DEPREL']
@@ -116,14 +115,7 @@ def write_vectors(df, outfilename, v, f, ndim):
             tree = "np.sum([" + ','.join(_trees) + "], axis=0)"
                 
         else:
-
             tree = re.sub("@$", "", print_node(G, '0', "", dfs, v, f))
-            #tree = 'v['.join(tree.rsplit('*v[', 1))
-            #tree = re.sub("[+]*f\['ONES'\]", "", tree)
-            #tree = re.sub("\(\)", "", tree)
-            
-            #if tree[0:3] == '(@v':
-            #    tree = re.sub("\(", "(f['IDENT']", tree)
 
         try:
             vec = eval(tree)
@@ -137,10 +129,6 @@ def write_vectors(df, outfilename, v, f, ndim):
             print(tree)
             exit()
             pass
-
-    #outvecs = np.array(outvecs)
-    #scaler.fit(outvecs)
-    #outvecs = scaler.transform(outvecs)
 
     for i,sentence in enumerate(sentences):
         try:
@@ -168,7 +156,6 @@ def print_node(G, n, out, df, v, f):
         if not PUNCT and df.loc[df['IDX'] == n]['UPOS'].values[0] == 'PUNCT':
             w = 'OOV'
 
-        #if len(G.nodes) != len(out.split('[')):
         if h != '0.0':
             if w in f:
                 out += "f['" + df.loc[df['IDX'] == n]['WORDFORM'].values[0] + "']"
@@ -200,11 +187,9 @@ def print_node(G, n, out, df, v, f):
     return out
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='make mods')
+    parser = argparse.ArgumentParser(description='vectorize sentences in conllu format')
     parser.add_argument('-i', '--infile', dest='infile', nargs=1, required=True, help='conllu file')
     parser.add_argument('-o', '--outfile', dest='outfile', nargs=1, required=True, help='out file')
-    #parser.add_argument('-v', '--vectors', dest='vectors', nargs=1, required=True, help='vectors file')
-    #parser.add_argument('-f', '--functions', dest='functions', nargs=1, required=True, help='functions file')
     args = parser.parse_args()
     
     conllu = read_conllu(args.infile[0])
@@ -219,15 +204,6 @@ if __name__ == '__main__':
     except:
         print("ERROR: vectors.pkl doesn't exist")
         exit()
-        #v, ndim = read_vectors(args.vectors[0])
-        #f, ndim = read_vectors(args.functions[0])
-
-        print("writing pickle data to " + pkl_file)
-        pf = open(pkl_file, 'wb')
-        pickle.dump(v, pf)
-        pickle.dump(f, pf)
-        pickle.dump(ndim, pf)
-        pf.close()
     
     write_vectors(conllu, args.outfile[0], v, f, int(math.sqrt(ndim)))
     

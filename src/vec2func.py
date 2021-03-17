@@ -85,10 +85,9 @@ def write_vecs(d, ndim, outfilename):
     
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(description='make mods')
+    parser = argparse.ArgumentParser(description='learn functions from unigram and bigram vectors')
     parser.add_argument('-i', '--infile', dest='infile', nargs=1, required=False, help='input vector file')
     parser.add_argument('-o', '--outfile', dest='outfile', nargs=1, required=False, help='output vector file')
-    parser.add_argument('-c', '--conllu', dest='conllu', nargs=1, required=False, help='conllu file')
     args = parser.parse_args()
 
     pkl_file = 'vectors.pkl'    

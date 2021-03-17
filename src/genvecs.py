@@ -133,24 +133,22 @@ def graph2sents(G, words):
     return sents
 
 def main():
-    logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
-    parser = argparse.ArgumentParser(description='Process CoNLL-U corpus and generate a word2vec model.')
-    # Required positional argument
+    parser = argparse.ArgumentParser(description='generate unigram and bigram vectors from a conllu file')
     parser.add_argument('-i', dest='input_file', type=str, required=True, nargs=1,
-                        help='Input CoNLL-U corpus (UTF-8)')
+                        help='input CoNLL-U corpus (UTF-8)')
     parser.add_argument('-o', dest='output_file', type=str, required=False, nargs=1,
-                        help='Base output filename of word2vec model (gensim)')
+                        help='output file name')
     parser.add_argument('--epochs', type=int, default=10,
-                        help='Training epochs (default 10). Shuffle sentences and re-train during each training epoch.')
+                        help='training epochs (default 10)')
     parser.add_argument('--dimension', type=int, default=100,
-                        help='word2vec: dimensionality of feature vectors (default 100). doc2vec mode may demand a higher value.')
+                        help='word2vec: dimensionality of feature vectors (default 100)')
     parser.add_argument('--window', type=int, default=5,
-                        help='word2vec: maximum distance between current and predicted word (default 5). doc2vec mode may demand a higher value.')
+                        help='word2vec: maximum distance between current and predicted word (default 5)')
     parser.add_argument('--workers', type=int, default=4,
                         help='word2vec: use this many worker threads to train the model (default 4)')
     parser.add_argument('--use-skipgram', action='store_true', default=True,
-                        help='Use skip-gram instead of the default CBOW.')
+                        help='use skip-gram instead of the CBOW')
     
     args = parser.parse_args()
     sents = extract_sents(args.input_file[0])
