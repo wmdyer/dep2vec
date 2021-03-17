@@ -32,11 +32,15 @@ the cat_chased
 . chased
 ```
 
-Finally, the vectorized representation of the sentence is the result of evaluating 
+Next, to vectorize a sentence such as 
 
-> (*the*@*dog*@**chased**) + (*was*@&**chased**) + (*by*@*cat*@**chased**) + (*the*@*cat*@**chased**)
+![Image of another dependency graph](https://github.com/wmdyer/dep2vec/blob/main/img/ud2.png)
 
-where **chased** is an *n*-dimensional vector and all other words are trained *n*x*n* functions.
+we sum the paths from each leaf to root:
+
+> (*the*@**house**) + (*on*@*hill*@**house**) + (*the*@*hill*@**house**)
+
+where **house** is an *n*-dimensional vector and *the*, *on*, and *hill* are *n*x*n* matrices. The resulting evaluation yields an *n*-dimensional vector representing the sentence.
 
 ## code usage
 
