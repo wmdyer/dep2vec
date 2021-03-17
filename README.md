@@ -34,7 +34,7 @@ the cat_chased
 
 Finally, the vectorized representation of the sentence is the result of evaluating 
 
-> (*the*@*dog*@**chased**) + (*was*@&**chased**) + (*by*@*cat*@**chased**) + (*the*@*cat*#**chased**)
+> (*the*@*dog*@**chased**) + (*was*@&**chased**) + (*by*@*cat*@**chased**) + (*the*@*cat*@**chased**)
 
 where **chased** is an *n*-dimensional vector and all other words are trained *n*x*n* functions.
 
