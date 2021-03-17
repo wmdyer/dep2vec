@@ -34,28 +34,61 @@ the cat_chased
 
 Finally, the vectorized representation of the sentence is the result of evaluating 
 
-> ((*the*@*dog*)+(*was*)+((*by*+*the*)@*cat*)+*.*)@**chased**
+> (*the*@*dog*@**chased**) + (*was*@&**chased**) + (*by*@*cat*@**chased**) + (*the*@*cat*#**chased**)
 
-where **chased** is a vector and all other words are trained functions.
+where **chased** is an *n*-dimensional vector and all other words are trained *n*x*n* functions.
 
 ## code usage
 
 1. genvecs.py: generate unigram and bigram vectors via word2vec where context is within dependency structure
 ```
-usage: genvecs.py [-h] [--epochs EPOCHS] [--dimension DIMENSION]
-                  [--window WINDOW] [--workers WORKERS] [--use-skipgram]
-                  input_file output_file
-genvecs.py: error: the following arguments are required: input_file, output_file
+usage: genvecs.py [-h] -i INPUT_FILE [-o OUTPUT_FILE] [--epochs EPOCHS]
+                  [--dimension DIMENSION] [--window WINDOW]
+                  [--workers WORKERS] [--use-skipgram]
+
+generate unigram and bigram vectors from a conllu file
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -i INPUT_FILE         input CoNLL-U corpus (UTF-8)
+  -o OUTPUT_FILE        output file name
+  --epochs EPOCHS       training epochs (default 10)
+  --dimension DIMENSION
+                        word2vec: dimensionality of feature vectors (default
+                        100)
+  --window WINDOW       word2vec: maximum distance between current and
+                        predicted word (default 5)
+  --workers WORKERS     word2vec: use this many worker threads to train the
+                        model (default 4)
+  --use-skipgram        use skip-gram instead of the CBOW
 ```
 
 2. vec2func.py: learn functions for dependent words
 ```
-usage: vec2func.py [-h] -i INFILE -o OUTFILE
+usage: vec2func.py [-h] [-i INFILE] [-o OUTFILE]
+
+learn functions from unigram and bigram vectors
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -i INFILE, --infile INFILE
+                        input vector file
+  -o OUTFILE, --outfile OUTFILE
+                        output vector file
 ```
 
 3. dep2vec.py: vectorize string in conllu format
 ```
-usage: dep2vec.py [-h] -i INFILE -o OUTFILE -v VECTORS -f FUNCTIONS
+usage: dep2vec.py [-h] -i INFILE -o OUTFILE
+
+vectorize sentences in conllu format
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -i INFILE, --infile INFILE
+                        conllu file
+  -o OUTFILE, --outfile OUTFILE
+                        out file
 ```
 
 ## evaluation
