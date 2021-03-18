@@ -16,7 +16,7 @@ For example, we have the below sentence and its associated dependency parse (fro
 
 ![Image of dependency graph](https://github.com/wmdyer/dep2vec/blob/main/img/ud.png)
 
-A string can be parsed by something like [UDPipe](https://github.com/ufal/udpipe) to reveal its dependency structure. The context for dependent words is simply the list of paths from each of the leaf nodes to the root, unigrams being the words themselves and bigrams each pair of adjacent words, where adjacency in this case represents dependency. Thus the contextual frames for the sentence above are
+A string can be parsed by something like [UDPipe](https://github.com/ufal/udpipe) to reveal its dependency structure. The context for dependent words is generated as the list of (reverse) paths from each of the leaf nodes to the root. Unigrams are the words themselves and bigrams each pair of adjacent words, where adjacency in this case represents dependency. Thus the contextual frames for the sentence above are
 
 ```
 the dog chased
