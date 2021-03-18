@@ -32,7 +32,7 @@ the cat_chased
 . chased
 ```
 
-Next, to vectorize a sentence such as 
+Next, to vectorize a string such as 
 
 ![Image of another dependency graph](https://github.com/wmdyer/dep2vec/blob/main/img/ud2.png)
 
