@@ -23,7 +23,7 @@ For example, we have the below sentence and its associated dependency parse (fro
 The linear sentence itself provides the context for the unigrams, and the bigrams are each instance of a dependent-head pair within the context of the unigrams. Thus the contextual frames for the sentence above are
 
 ```
-the dog was chansed by the cat .
+the dog was chased by the cat .
 the the_dog was chased by the cat .
 the dog was was_chased by the cat .
 the dog was dog_chased by the cat .
