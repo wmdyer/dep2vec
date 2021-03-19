@@ -97,4 +97,13 @@ optional arguments:
 ```
 
 ## evaluation
-TODO: measure performance of generated vectors on tasks such as paraphrase detection or machine translation and compare to transformer-generated vectors
+An initial validation shows promise. Given 4 sentences, the cosine similarity between their compositional vectors shows that `very poor customer service` and `horrible customer service` have \> 0.95 similarity, while all others pairs have lower similarities, including the distractor `great customer service` and the totall unrelated `from the ap comes this story`. Note that punctuation also contributes to the vector.
+
+cosine similarity | sentence 1 | sentence 2
+--- | --- | ---
+0.9589875560301709 | very poor customer service . | horrible customer service .
+0.8583422943558173 | very poor customer service . | great customer service .
+0.8300679446088252 | horrible customer service . | great customer service .
+0.8115795799656303 | very poor customer service . | from the ap comes this story :
+0.7995397933196976 | horrible customer service . | from the ap comes this story :
+0.7860171572335908 | great customer service . | from the ap comes this story :
