@@ -97,7 +97,7 @@ optional arguments:
 ```
 
 ## evaluation
-An initial validation shows promise. Given 4 sentences, the cosine similarity between their compositional vectors shows that `very poor customer service` and `horrible customer service` have \> 0.95 similarity, while all others pairs have lower similarities, including the distractor `great customer service` and the totall unrelated `from the ap comes this story`. Note that punctuation also contributes to the vector.
+An initial validation shows promise. Trained with 100-dim vectors (100x100 matrices) from the UD EWT train corpus, the model seems to do well on a toy validation set. Given 4 sentences, the cosine similarity between their compositional vectors shows that `very poor customer service` and `horrible customer service` have \> 0.95 similarity, while all other pairs have lower similarities, including the distractor `great customer service` and the totally unrelated `from the ap comes this story`. Note that punctuation also contributes to the vector.
 
 cosine similarity | sentence 1 | sentence 2
 --- | --- | ---
