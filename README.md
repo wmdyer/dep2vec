@@ -14,7 +14,7 @@ This project proposes three extensions of the *a*(**N**) → **AN** idea: (1) ex
 
 Point 3 maintains the commutativity -- at least semantically -- of sisters.
 
-The intuition here is that a dependent changes the distribution of its head. So by starting with the distribution of heads, trained with a standard skip-gram methodology, and then augmenting the unigram heads with <dependent>_<head> bigrams, we can represent the change that a dependent induces to its head with a function, itself a matrix.
+The intuition here is that a dependent changes the distribution of its head. So by starting with the distribution of heads, trained with a standard skip-gram methodology, and then augmenting the unigram heads with `<dependent>_<head>` bigrams, we can represent the change that a dependent induces to its head with a function.
 
 For example, we have the below sentence and its associated dependency parse (from [Universal Depedencies](https://universaldependencies.org/introduction.html)).
 
